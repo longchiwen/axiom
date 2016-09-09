@@ -50,13 +50,13 @@ import (
 	"os/exec"
 	"sort"
 
-	"github.com/codegangsta/cli"
 	log "github.com/inconshreveable/log15"
 	"github.com/inconshreveable/log15/term"
 	"github.com/inconshreveable/mousetrap"
-	"github.com/mattn/go-colorable"
+	colorable "github.com/mattn/go-colorable"
 	update "gopkg.in/inconshreveable/go-update.v0"
 	"gopkg.in/inconshreveable/go-update.v0/check"
+	cli "gopkg.in/urfave/cli.v1"
 	"gopkg.in/yaml.v1"
 )
 
@@ -105,9 +105,21 @@ func NewLogged() *Logged {
 
 func (w *Logged) Wrap(cmd cli.Command) cli.Command {
 	cmd.Flags = append(cmd.Flags, []cli.Flag{
-		cli.StringFlag{"log", w.DefaultTarget, "path to log file, 'stdout', 'stderr' or 'false'", "", nil},
-		cli.StringFlag{"log-level", w.DefaultLevel, "logging level", "", nil},
-		cli.StringFlag{"log-format", w.DefaultFormat, "log record format: 'term', 'logfmt', 'json'", "", nil},
+		cli.StringFlag{
+			Name:  "log",
+			Value: w.DefaultTarget,
+			Usage: "path to log file, 'stdout', 'stderr' or 'false'",
+		},
+		cli.StringFlag{
+			Name:  "log-level",
+			Value: w.DefaultLevel,
+			Usage: "logging level",
+		},
+		cli.StringFlag{
+			Name:  "log-format",
+			Value: w.DefaultFormat,
+			Usage: "log record format: 'term', 'logfmt', 'json'",
+		},
 	}...)
 	oldAction := cmd.Action
 	cmd.Action = func(c *cli.Context) {
@@ -119,7 +131,7 @@ func (w *Logged) Wrap(cmd cli.Command) cli.Command {
 		for _, l := range w.Loggers {
 			l.SetHandler(handler)
 		}
-		oldAction(c)
+		cli.HandleAction(oldAction, c)
 	}
 	return cmd
 }
@@ -228,7 +240,11 @@ func (w *YAMLConfigLoader) Load(rd io.Reader) error {
 
 func (w *YAMLConfigLoader) Wrap(cmd cli.Command) cli.Command {
 	cmd.Flags = append(cmd.Flags, []cli.Flag{
-		cli.StringFlag{"config", w.DefaultPath, "path to YAML config file", "", nil},
+		cli.StringFlag{
+			Name:  "config",
+			Value: w.DefaultPath,
+			Usage: "path to YAML config file",
+		},
 	}...)
 	oldAction := cmd.Action
 	cmd.Action = func(c *cli.Context) {
@@ -240,7 +256,7 @@ func (w *YAMLConfigLoader) Wrap(cmd cli.Command) cli.Command {
 				os.Exit(1)
 			}
 		}
-		oldAction(c)
+		cli.HandleAction(oldAction, c)
 	}
 	return cmd
 }
@@ -327,7 +343,11 @@ func (cmd *Updater) Command() cli.Command {
 		Name:  "update",
 		Usage: "update to the latest version",
 		Flags: []cli.Flag{
-			cli.StringFlag{"channel", cmd.DefaultChannel, "update to the most recent release on this channel", "", nil},
+			cli.StringFlag{
+				Name:  "channel",
+				Value: cmd.DefaultChannel,
+				Usage: "update to the most recent release on this channel",
+			},
 		},
 		Action: func(c *cli.Context) {
 			res, err := cmd.Update(c.String("channel"), c.App.Version)
@@ -352,7 +372,7 @@ func newCrashHandler(onCrash func(interface{})) CmdWrapper {
 func (w *crashHandler) Wrap(cmd cli.Command) cli.Command {
 	oldAction := cmd.Action
 	cmd.Action = func(c *cli.Context) {
-		oldAction(c)
+		cli.HandleAction(oldAction, c)
 	}
 	return cmd
 }
